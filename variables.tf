@@ -1,6 +1,6 @@
 variable "aws_region" { default = "us-west-2" }
-variable "project"    { default = "vault-cicd-2048" }
-variable "env"        { default = "dev" }
+variable "project" { default = "vault-cicd-2048" }
+variable "env" { default = "dev" }
 
 # ECR: Provide either name (repo must exist) or full repo URL (registry URI)
 variable "ecr_repo_name" {
@@ -23,28 +23,46 @@ variable "capacity_provider" {
 
 
 # Single public subnet only
-variable "vpc_cidr" { 
-    description = "VPC CIDR" 
-    default = "10.20.0.0/16" 
+variable "vpc_cidr" {
+  description = "VPC CIDR"
+  default     = "10.20.0.0/16"
 }
 
-variable "public_subnet_cidr" { 
-    description = "Public subnet CIDR (single AZ demo)" 
-    default = "10.20.1.0/24" 
+variable "public_subnet_cidr" {
+  description = "Public subnet CIDR (single AZ demo)"
+  default     = "10.20.1.0/24"
 }
-variable "availability_zone" { 
-    description = "AZ for the public subnet (optional). Leave blank to let AWS pick." 
-    type = string 
-    default = "us-west-2a" 
+variable "availability_zone" {
+  description = "AZ for the public subnet (optional). Leave blank to let AWS pick."
+  type        = string
+  default     = "us-west-2a"
 }
 
 # App container port
-variable "container_port" { 
-    description = "Container port exposed by your app" 
-    default = 8000 
+variable "container_port" {
+  description = "Container port exposed by your app"
+  default     = 8000
 }
 
 # initial image placeholder used for first task definition (CI will update it)
-variable "initial_image" { 
-    default = "amazon/amazon-ecs-sample" 
+variable "initial_image" {
+  default = "amazon/amazon-ecs-sample"
+}
+
+variable "vault_ami_id" {
+  description = "AMI ID for the Vault server (default is Amazon Linux 2)"
+  type        = string
+  default     = "ami-05f991c49d264708f" # Example AMI ID, update as needed
+}
+
+variable "vault_instance_type" {
+  description = "Instance type for the Vault server"
+  type        = string
+  default     = "t3.micro" # Example instance type, update as needed
+}
+
+variable "name" {
+  description = "Name of the Vault server"
+  type        = string
+  default     = "aws-vault"
 }

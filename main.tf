@@ -66,9 +66,9 @@ resource "aws_iam_role" "task_exec_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "ecs-tasks.amazonaws.com" },
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -142,8 +142,8 @@ resource "aws_ecs_service" "svc" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = [aws_subnet.public.id]
-    security_groups = [aws_security_group.svc_sg.id]
+    subnets          = [aws_subnet.public.id]
+    security_groups  = [aws_security_group.svc_sg.id]
     assign_public_ip = true
   }
 
@@ -241,4 +241,81 @@ resource "aws_iam_role_policy" "ecr_ecs_deploy_policy" {
       }
     ]
   })
+}
+
+############################################
+# Vault EC2 Configuration
+############################################
+
+# Vault EC2 Instance Security Group (ports 22, 8200, 8201)
+resource "aws_security_group" "vault_sg" {
+  vpc_id = aws_vpc.this.id
+  name   = "${var.project}-${var.env}-vault-sg"
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound SSH"
+  }
+
+  ingress {
+    from_port   = 8200
+    to_port     = 8200
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound Vault HTTP"
+  }
+
+  ingress {
+    from_port   = 8201
+    to_port     = 8201
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow inbound Vault Cluster"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.project}-${var.env}-vault-sg"
+  }
+}
+
+# Generate SSH Key Pair for AWS Vault
+resource "tls_private_key" "aws_vault_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "aws_vault_key_pair" {
+  key_name   = "${var.name}-key"
+  public_key = tls_private_key.aws_vault_key.public_key_openssh
+}
+
+# Save the private key to a local file (optional)
+resource "local_file" "aws_vault_private_key" {
+  content         = tls_private_key.aws_vault_key.private_key_pem
+  filename        = "${path.module}/aws_vault_key.pem"
+  file_permission = "0600"
+}
+
+# EC2 Vault Instance
+resource "aws_instance" "vault" {
+  ami                    = var.vault_ami_id
+  instance_type          = var.vault_instance_type
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.vault_sg.id]
+  key_name               = aws_key_pair.aws_vault_key_pair.key_name
+  user_data              = file("vault.sh")
+
+  tags = {
+    Name = "${var.project}-${var.env}-vault"
+  }
 }
